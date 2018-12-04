@@ -1,0 +1,13 @@
+[
+  {
+    "name":"my.graal.SampleCommand",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "context" },
+      { "name" : "event" }
+    ]
+  }
+]
