@@ -40,6 +40,7 @@ dependencies {
     compile "info.picocli:picocli"
     compile "io.micronaut.configuration:micronaut-picocli"
 
+    compile "io.micronaut:micronaut-function-aws"
 
     testCompile "junit:junit:4.12"
     testCompile "io.micronaut:micronaut-inject-java"

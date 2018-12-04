@@ -1,3 +1,5 @@
 micronaut:
     application:
         name: hello-graal
+lambda:
+    url: "http://localhost:3000/"
