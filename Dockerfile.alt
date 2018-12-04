@@ -1,18 +1,21 @@
-FROM oracle/graalvm-ce:1.0.0-rc9
+# build native by amazon linux graal.
+# cd AmazonGraal 
+# docker build -t amazongraal:9 
+
+FROM amazongraal:rc9
 COPY build/libs/*-all.jar my-graal.jar
-# for picclli cli application.
-COPY src/main/resources/refcli.json refcli.json 
+COPY src/main/resources/refcli.json refcli.json
 ADD . build
-RUN java -cp my-graal.jar io.micronaut.graal.reflect.GraalClassLoadingAnalyzer
+RUN /usr/lib/graalvm/bin/java -cp my-graal.jar io.micronaut.graal.reflect.GraalClassLoadingAnalyzer
 RUN cat build/reflect.json
-# -H:-UseServiceLoaderFeature is for RC8
-RUN native-image --no-server \
+RUN /usr/lib/graalvm/bin/native-image --no-server \
              --class-path my-graal.jar \
 			 -H:ReflectionConfigurationFiles=build/reflect.json,refcli.json \
 			 -H:EnableURLProtocols=http \
 			 -H:IncludeResources="logback.xml|application.yml|META-INF/services/*.*" \
 			 -H:Name=my-graal \
 			 -H:Class=my.graal.SampleCommand \
+			 -H:+ReportUnsupportedElementsAtRuntime \
 			 -H:+ReportUnsupportedElementsAtRuntime \
 			 -H:+AllowVMInspection \
 			 -H:-UseServiceLoaderFeature \

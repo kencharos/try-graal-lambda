@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -euo pipefail
+
+# graal のシングルバイナリ名
+EXEC="$LAMBDA_TASK_ROOT/$_HANDLER"
+
+# 実行可能バイナリがなければ初期化エラーのエンドポイントにエラーをPOSTします
+# リクエストボディの形式に決まりはありません
+if [ ! -x "$EXEC" ]; then
+    ERROR="{\"errorMessage\" : \"$_HANDLER is not found.\", \"errorType\" : \"HandlerNotFoundException\"}"
+    curl -X POST "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/init/error"  -d "$ERROR"
+    exit 1
+fi
+
+# イベントループはバイナリの中で実装してあるものとして実行
+$EXEC

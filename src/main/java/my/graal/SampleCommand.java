@@ -1,19 +1,12 @@
 package my.graal;
 
-import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.configuration.picocli.PicocliRunner;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.client.RxHttpClient;
-import io.micronaut.http.client.annotation.Client;
 import picocli.CommandLine;
-
-import io.micronaut.http.HttpStatus;
-import io.micronaut.http.MediaType;
-import io.micronaut.http.annotation.*;
-import io.micronaut.http.client.*;
 
 import javax.inject.Inject;
 import java.net.URL;
@@ -25,44 +18,81 @@ public class SampleCommand implements Runnable {
         PicocliRunner.run(SampleCommand.class, args);
     }
 
-    @CommandLine.Option(names = {"-c"}, description = "context")
-    public String context;
-
-
-    @CommandLine.Option(names = {"-e"}, description = "event")
-    public String event;
+    /** AWS_LAMBDA_RUNTIME_API , env*/
+    @Value("${aws.lambda.runtime.api}") String lambdaEndpoint;
 
     @Inject CalculationService service;
 
-    @Inject ObjectMapper mapper;
-
-    @Value("${lambda.url}") String lambdaUrl;
-
     @Override
     public void run() {
-        SampleRequest req = null;
-        LambdaContext ctx = null;
+        // event loop
+        while(true) {
+            // get function event
+            Pair pair = getContext();
+            if (pair == null) {
+                continue;
+            }
+            // call function
+            SampleResponse answer = service.calc(pair.context, pair.request);
 
-        try {
-            req = mapper.readValue(event, SampleRequest.class);
-            ctx = mapper.readValue(context, LambdaContext.class);
+            // output function result
+            System.out.println("Answer is " + answer.getAnswer());
+
+            // send OK
+            if (!sendResult("response", pair.context.getAwsRequestId(), answer)) {
+                sendResult("error", pair.context.getAwsRequestId(), "error raised");
+            }
+        }
+    }
+
+    private Pair getContext() {
+
+        String url = "http://" + lambdaEndpoint;
+        String path = "/2018-06-01/runtime/invocation/next";
+        try(RxHttpClient client = RxHttpClient.create(new URL(url))) {
+            HttpResponse<SampleRequest> res =  client.exchange(HttpRequest.GET(path), SampleRequest.class).blockingLast();
+
+            LambdaContext ctx = new LambdaContext();
+            ctx.setAwsRequestId(res.header("Lambda-Runtime-Aws-Request-Id"));
+            ctx.setTraceId(res.header("Lambda-Runtime-Trace-Id"));
+
+            return  new Pair(ctx, res.body());
+
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            return null;
         }
-        int answer = service.calc(ctx, req);
+    }
 
-        System.out.println("Answer is " + answer);
 
-        SampleResponse res = new SampleResponse();
-        res.setAnswer(answer);
-
-        // send OK
-        try(RxHttpClient client = RxHttpClient.create(new URL(lambdaUrl))) {
-
-            HttpResponse<String> result = client.exchange(HttpRequest.POST("/api/next", res), String.class).blockingLast();
-            System.out.println(result.body());
-        }catch (Exception e) {
-            throw new RuntimeException(e);
+    /**
+     * @param responseOrError  success,error
+     * @param requestId
+     * @param body
+     * @param <T>
+     * @throws Exception
+     */
+    private <T>  boolean sendResult(String responseOrError, String requestId, T body) {
+        String url = "http://" + lambdaEndpoint;
+        String path = "/2018-06-01/runtime/invocation/" + requestId + "/" + responseOrError;
+        try(RxHttpClient client = RxHttpClient.create(new URL(url))) {
+            client.exchange(HttpRequest.POST("path", body), String.class).blockingLast();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
+    }
+
+    private static class Pair {
+
+        public final LambdaContext context;
+        public final SampleRequest request;
+
+        public Pair(LambdaContext context, SampleRequest request) {
+            this.context = context;
+            this.request = request;
+        }
+
     }
 }

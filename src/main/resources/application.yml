@@ -1,5 +1,7 @@
 micronaut:
     application:
         name: hello-graal
-lambda:
-    url: "http://localhost:3000/"
+aws:
+    lambda:
+        runtime:
+            api: localhost:3000

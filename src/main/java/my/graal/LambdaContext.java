@@ -4,7 +4,7 @@ public class LambdaContext {
 
     private String awsRequestId;
 
-    private String functionName;
+    private String traceId;
 
     public String getAwsRequestId() {
         return awsRequestId;
@@ -14,11 +14,11 @@ public class LambdaContext {
         this.awsRequestId = awsRequestId;
     }
 
-    public String getFunctionName() {
-        return functionName;
+    public String getTraceId() {
+        return traceId;
     }
 
-    public void setFunctionName(String functionName) {
-        this.functionName = functionName;
+    public void setTraceId(String traceId) {
+        this.traceId = traceId;
     }
 }
