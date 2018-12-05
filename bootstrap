@@ -2,16 +2,28 @@
 
 set -euo pipefail
 
-# graal のシングルバイナリ名
-EXEC="$LAMBDA_TASK_ROOT/$_HANDLER"
+EXEC=$LAMBDA_TASK_ROOT/$_HANDLER
 
-# 実行可能バイナリがなければ初期化エラーのエンドポイントにエラーをPOSTします
-# リクエストボディの形式に決まりはありません
-if [ ! -x "$EXEC" ]; then
-    ERROR="{\"errorMessage\" : \"$_HANDLER is not found.\", \"errorType\" : \"HandlerNotFoundException\"}"
-    curl -X POST "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/init/error"  -d "$ERROR"
-    exit 1
-fi
+# event loop
+while true
+do
+  HEADERS="$(mktemp)"
+  # Get an event
+  EVENT_DATA=$(curl -sS -LD "$HEADERS" -X GET "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next")
+  REQUEST_ID=$(grep -Fi Lambda-Runtime-Aws-Request-Id "$HEADERS" | tr -d '[:space:]' | cut -d: -f2)
 
-# イベントループはバイナリの中で実装してあるものとして実行
-$EXEC
+  # Execute the handler function from the script
+  RESPONSE_FILE="$(mktemp)"
+  ERROR_FILE="$(mktemp)"
+  $EXEC -r "$REQUEST_ID" -d "$EVENT_DATA" -o $RESPONSE_FILE -e $ERROR_FILE
+
+  # Send the response
+  if [ -s $RESPONSE_FILE ]; then
+      RESPONSE=$(cat $RESPONSE_FILE)
+      curl -X POST "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/$REQUEST_ID/response"  -d "$RESPONSE"
+  else
+      RESPONSE=$(cat $ERROR_FILE)
+      curl -X POST "http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/$REQUEST_ID/error"  -d "$RESPONSE"
+  fi
+
+done

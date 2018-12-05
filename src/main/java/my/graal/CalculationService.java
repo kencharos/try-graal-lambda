@@ -8,8 +8,7 @@ import javax.inject.Singleton;
 @Singleton
 public class CalculationService {
 
-    public SampleResponse calc(LambdaContext ctx, SampleRequest req) {
-        System.out.println(ctx.getAwsRequestId() + ":" + ctx.getTraceId());
+    public SampleResponse calc(SampleRequest req) {
         SampleResponse res = new SampleResponse();
         res.setAnswer(req.getV1() + req.getV2());
         return res;

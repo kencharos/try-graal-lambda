@@ -4,7 +4,13 @@
     "allDeclaredConstructors" : true,
     "allPublicConstructors" : true,
     "allDeclaredMethods" : true,
-    "allPublicMethods" : true
+    "allPublicMethods" : true,
+    "fields" : [
+      { "name" : "requestId" },
+      { "name" : "event" },
+      { "name" : "result" },
+      { "name" : "errorResult" }
+    ]
   },
   {
     "name": "my.graal.SampleRequest",
@@ -15,13 +21,6 @@
   },
   {
     "name": "my.graal.SampleResponse",
-    "allDeclaredConstructors" : true,
-    "allPublicConstructors" : true,
-    "allDeclaredMethods" : true,
-    "allPublicMethods" : true
-  },
-  {
-    "name": "my.graal.LambdaContext",
     "allDeclaredConstructors" : true,
     "allPublicConstructors" : true,
     "allDeclaredMethods" : true,

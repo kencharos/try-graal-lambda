@@ -24,7 +24,12 @@ docker build -t function .
 
 ## micronaut graal sample からの修正点
 
-+ custom runtimeで動かすため、 piccoli 形式の CLIアプリケーションとし、イベントループを実装した
++ bootstrap 中でイベントループを実行するようにし、CLIアプリはループ一回分の処理だけを行う。
+    + bootstrap がCLIアプリの結果を受け取る方法としてファイルを採用した。
+    + <バイナリ> -r <リクエストID> -d <イベントデータ> -o <成功結果ファイル> -e <失敗結果ファイル>
+    + 上記の実行で、成功結果ファイルの中身があれば成功としてその中身を response エンドポイントに送信する
+    + 成功結果ファイルの中身が無い場合は、失敗結果ファイルの中身えお error エンドポイントに送信 
++ custom runtimeで動かすため、 piccoli 形式の CLIアプリケーションとした
 + piccoli を native化するため、 CommandClass や 自作DTOのリフレクション定義ファイルを作成し、ビルド時に追加するようにした。
 + micronaut 1.0.0 は graal rc7に依存しているが、 rc7は maven から消えたたため、 rc9 にした。
 + rc9 でビルドするため  jzlib を追加した
