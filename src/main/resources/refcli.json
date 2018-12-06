@@ -4,13 +4,7 @@
     "allDeclaredConstructors" : true,
     "allPublicConstructors" : true,
     "allDeclaredMethods" : true,
-    "allPublicMethods" : true,
-    "fields" : [
-      { "name" : "requestId" },
-      { "name" : "event" },
-      { "name" : "result" },
-      { "name" : "errorResult" }
-    ]
+    "allPublicMethods" : true
   },
   {
     "name": "my.graal.SampleRequest",

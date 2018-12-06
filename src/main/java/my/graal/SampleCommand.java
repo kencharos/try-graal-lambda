@@ -1,13 +1,15 @@
 package my.graal;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.configuration.picocli.PicocliRunner;
+import io.micronaut.context.annotation.Value;
+import io.micronaut.http.HttpRequest;
+import io.micronaut.http.HttpResponse;
+import io.micronaut.http.client.RxHttpClient;
 import picocli.CommandLine;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.net.URL;
 
 @CommandLine.Command(name = "hello-graal")
 public class SampleCommand implements Runnable {
@@ -15,57 +17,48 @@ public class SampleCommand implements Runnable {
     public static void main(String[] args) throws Exception {
         PicocliRunner.run(SampleCommand.class, args);
     }
-    /**  */
-    @CommandLine.Option(names = {"-r"}, description = "RequestId")
-    public String requestId;
 
-    /** event data, json string */
-    @CommandLine.Option(names = {"-d"}, description = "event data")
-    public String event;
-
-    @CommandLine.Option(names = {"-o"}, description = "output")
-    public String result;
-
-    @CommandLine.Option(names = {"-e"}, description = "error output")
-    public String errorResult;
+    @Value("${aws.lambda.runtime.api}") String lambdaRuntimeEndpoint;
 
     @Inject CalculationService service;
 
-    @Inject ObjectMapper mapper;
+    RxHttpClient client;
+
+    @PostConstruct
+    public void buildHttpClient() throws Exception{
+        System.out.println("Build Http Client");
+        this.client = RxHttpClient.create(new URL("http://" + lambdaRuntimeEndpoint));
+    }
+
+    private Pair<String, SampleRequest> fetchContext() {
+        HttpResponse<SampleRequest> response =
+                client.exchange(HttpRequest.GET("/2018-06-01/runtime/invocation/next"), SampleRequest.class)
+                    .blockingFirst();
+
+        String requestId = response.header("Lambda-Runtime-Aws-Request-Id");
+        return new Pair<>(requestId, response.body());
+    }
+
+    private void sendResponse(String requestId, SampleResponse answer) {
+        String path = "/2018-06-01/runtime/invocation/" + requestId + "/response";
+        HttpResponse<String> response =
+                client.exchange(HttpRequest.POST(path, answer), String.class)
+                        .blockingFirst();
+        System.out.println(response.status() + " " + response.body());
+    }
 
     @Override
     public void run() {
 
-        SampleRequest req;
-        try {
-            req = mapper.readValue(event, SampleRequest.class);
-        } catch (IOException e) {
-            outputError("invalid event data format");
-            return;
-        }
-
-        // call function
-        SampleResponse answer = service.calc(req);
-
-        // output function result
-        System.out.println(requestId + " Answer is " + answer.getAnswer());
-        outputResult(answer);
-    }
-
-    private void outputResult(SampleResponse res) {
-        try {
-            Files.write(Paths.get(result), mapper.writeValueAsBytes(res));
-        } catch (IOException e) {
-            e.printStackTrace();
+        while (true) {
+            Pair<String, SampleRequest> input = fetchContext();
+            // call function
+            SampleResponse answer = service.calc(input.t2);
+            // output function result
+            System.out.println(input.t1 + " Answer is " + answer.getAnswer());
+            sendResponse(input.t1, answer);
         }
     }
 
-    private void outputError(String error) {
-        try {
-            Files.write(Paths.get(errorResult), error.getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
 }

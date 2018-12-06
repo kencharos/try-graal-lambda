@@ -1,6 +1,7 @@
 micronaut:
     application:
         name: hello-graal
+# for test use, this value replaced env value ${AWS_LAMBDA_RUNTIME_API}
 aws:
     lambda:
         runtime:
