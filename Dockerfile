@@ -14,10 +14,9 @@ RUN native-image --no-server \
 			 -H:Name=my-graal \
 			 -H:Class=my.graal.SampleCommand \
 			 -H:+ReportUnsupportedElementsAtRuntime \
-			 -H:+AllowVMInspection \
+			 -H:-AllowVMInspection \
 			 -H:-UseServiceLoaderFeature \
+			 -R:-InstallSegfaultHandler \
 			 --rerun-class-initialization-at-runtime='sun.security.jca.JCAUtil$CachedSecureRandomHolder,javax.net.ssl.SSLContext' \
 			 --delay-class-initialization-to-runtime=io.netty.handler.codec.http.HttpObjectEncoder,io.netty.handler.codec.http.websocketx.WebSocket00FrameEncoder,io.netty.handler.ssl.util.ThreadLocalInsecureRandom
 ENTRYPOINT ["./my-graal"]
-
-#io.micronaut.function.executor.FunctionApplication

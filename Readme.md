@@ -1,8 +1,8 @@
-# (WIP) Run graal native binary on Aws Lambda
+#  Run graal native binary on Aws Lambda
 
 ## 概要
 
-Graal で Native 化したバイナリを、 AWS Lambda の custom runtimeで動かそうと試みましたが動きませんでした。
+Graal で Native 化したバイナリを、 AWS Lambda の custom runtimeで動かしました。
 
 ## 手順
 
@@ -34,6 +34,8 @@ docker build -t function .
 + micronaut 1.0.0 は graal rc7に依存しているが、 rc7は maven から消えたたため、 rc9 にした。
 + rc9 でビルドするため  jzlib を追加した
 + Dockerfile の native-image の引数に `-H:-UseServiceLoaderFeature` を追加した
++ -H:-AllowVMInspection を設定しないと Lambda で起動できなかったため修正
++ https://github.com/oracle/graal/issues/841 に基づき、`R:-InstallSegfaultHandler` を追加
 
 ## AnazonGraal の Dockerfileについて
 
@@ -54,4 +56,47 @@ chmod + bootstrap
 zip my-graal.zip my-graal bootstrap
 ```
 
+## パフォーマンス
+
+イベントループを curl で実装している関係か、少々遅め。
+
+### Cold Start
+
+Memory: 81MB
+Duration: 2862ms
+
+```
+START RequestId: 6cec98ac-f8f9-11e8-a714-33c9118529bc Version: $LATEST
+6cec98ac-f8f9-11e8-a714-33c9118529bc Answer is 24
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100    29  100    16  100    13    395    321 --:--:-- --:--:-- --:--:--   400
+{"status":"OK"}
+END RequestId: 6cec98ac-f8f9-11e8-a714-33c9118529bc
+REPORT RequestId: 6cec98ac-f8f9-11e8-a714-33c9118529bc	Init Duration: 53.38 ms	Duration: 2862.32 ms	Billed Duration: 3000 ms 	Memory Size: 128 MB	Max Memory Used: 81 MB	
+```
+
+### ホットスタート
+
+
+### Cold Start
+
+Memory: 81MB
+Duration: 478ms
+
+```
+START RequestId: 81f8a020-f8f9-11e8-8aa3-e12b01cc879f Version: $LATEST
+81f8a020-f8f9-11e8-8aa3-e12b01cc879f Answer is 24
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100    29  100    16  100    13    209    170 --:--:-- --:--:-- --:--:--   800
+{"status":"OK"}
+END RequestId: 81f8a020-f8f9-11e8-8aa3-e12b01cc879f
+REPORT RequestId: 81f8a020-f8f9-11e8-8aa3-e12b01cc879f	Duration: 478.25 ms	Billed Duration: 500 ms 	Memory Size: 128 MB	Max Memory Used: 81 MB	
+
+```
 
